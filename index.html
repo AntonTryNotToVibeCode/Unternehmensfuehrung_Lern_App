@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Betriebssysteme & Netzwerke – Lernkarten</title>
+<style>
+:root {
+  --bg:#0b1020; --bg2:#0d1430; --panel:#121933; --panel2:#1a2345; --text:#edf2ff; --muted:#aeb8d4;
+  --accent:#7aa2ff; --good:#27c281; --bad:#ff6b6b; --border:#2b376b;
+}
+body.light {
+  --bg:#f5f7fb; --bg2:#e9eef9; --panel:#ffffff; --panel2:#eef2fb; --text:#182033; --muted:#5f6b85;
+  --accent:#4b74ff; --good:#1f9d68; --bad:#d94b4b; --border:#d8dfef;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:linear-gradient(180deg,var(--bg),var(--bg2)); color:var(--text);
+}
+.wrap { max-width:1100px; margin:0 auto; padding:24px; display:flex; flex-direction:column; gap:12px; }
+.card {
+  background:rgba(18,25,51,.92);
+  border:1px solid var(--border); border-radius:18px; padding:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,.18);
+}
+body.light .card { background:rgba(255,255,255,.92); }
+h1 { margin:0 0 8px; font-size:1.8rem; }
+.muted { color:var(--muted); }
+.controls { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); align-items:end; }
+.control label { display:block; margin-bottom:6px; color:var(--muted); }
+.control input,.control select {
+  width:100%; background:var(--panel2); border:1px solid var(--border); color:var(--text);
+  border-radius:12px; padding:10px 12px;
+}
+.row,.status,.footer { display:flex; gap:10px; flex-wrap:wrap; }
+.status { gap:14px; margin-top:12px; color:var(--muted); }
+button {
+  background:var(--accent); color:white; border:0; padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:700;
+}
+button.secondary { background:transparent; color:var(--text); border:1px solid var(--border); }
+button.good { background:var(--good); }
+button.bad { background:var(--bad); }
+button:disabled { opacity:.6; cursor:not-allowed; }
+.pill {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:6px 10px; border-radius:999px; background:var(--panel2); border:1px solid var(--border); color:var(--muted);
+}
+.question { font-size:1.55rem; line-height:1.45; margin:6px 0 18px; }
+.answerBox {
+  border:1px solid var(--border); background:var(--panel2); border-radius:14px; padding:16px 18px;
+  line-height:1.6; white-space:pre-wrap;
+}
+.hidden { display:none; }
+.progress {
+  height:10px; background:var(--panel2); border-radius:999px; overflow:hidden; margin-top:12px; border:1px solid var(--border);
+}
+.progress > div { height:100%; width:0; background:var(--accent); transition:width .25s ease; }
+.small { font-size:.92rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>Lernkarten Betriebssysteme & Netzwerke</h1>
+    <div class="muted">Frage-Antwort-Katalog</div>
+    <div class="status">
+      <span class="pill">Gesamt: <strong id="totalCount">0</strong></span>
+      <span class="pill">Im Stapel: <strong id="stackCount">0</strong></span>
+      <span class="pill">Gesehen: <strong id="seenCount">0</strong></span>
+      <span class="pill">Richtig: <strong id="correctCount">0</strong></span>
+      <span class="pill">Falsch: <strong id="wrongCount">0</strong></span>
+      <span class="pill">Aktuell: <strong id="positionCount">0 / 0</strong></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="controls">
+      <div class="control"><label for="search">Suche</label><input id="search" type="text" placeholder="Stichwort in Frage oder Antwort"></div>
+      <div class="control"><label for="limit">Anzahl</label><select id="limit"><option value="0">Alle</option><option value="10">10</option><option value="20">20</option><option value="50" selected>50</option><option value="100">100</option></select></div>
+      <div class="control"><label for="order">Reihenfolge</label><select id="order"><option value="random" selected>Zufällig</option><option value="normal">Original</option><option value="unseen">Nur neue Fragen</option></select></div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button id="startBtn">Lernkarten starten</button>
+      <button class="secondary" id="restartBtn">Neu mischen</button>
+      <button class="secondary" id="themeBtn">Hellmodus</button>
+      <button class="secondary" id="resetProgressBtn">Fortschritt zurücksetzen</button>
+    </div>
+    <div class="progress"><div id="bar"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="small muted" id="meta"></div>
+    <div class="question" id="question">Klicke auf „Lernkarten starten“.</div>
+    <div class="answerBox hidden" id="answer"></div>
+    <div class="footer" style="margin-top:14px">
+      <button id="showBtn" class="hidden">Antwort anzeigen</button>
+      <button id="correctBtn" class="good hidden">Richtig</button>
+      <button id="wrongBtn" class="bad hidden">Falsch</button>
+      <button id="nextBtn" class="hidden">Nächste Frage</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ALL_QUESTIONS = [{"question": "Welche Aufgaben hat ein OS?", "answer": "– Verwaltung und Steuerung des Computersystems. – Abstraktion: Bereitstellung einer vereinfachten Schnittstelle für Benutzer und Anwendungen durch das Verbergen technischer Details. – Dienstbereitstellung: Laden und Verwalten von Programmen, Steuerung von Ein-/Ausgabegeräten und Interprozesskontrolle. – Ressourcenverwaltung: Koordination von Prozessen, Scheduling, Speicherschutz und Mechanismen zur Vermeidung von Deadlocks."}, {"question": "Was sind Protokolle und Dienste im BS-Kontext?", "answer": "– Protokolle: Standardisierte Regeln, die eine einheitliche Kommunikation zwischen den Systemkomponenten ermöglichen. – Dienste (Services): Funktionen, die vom Betriebssystem bereitgestellt werden, um anderen Komponenten eine definierte Nutzung zu ermöglichen."}, {"question": "Welche Schichten beinhaltet das Schichten-Modell?", "answer": "– Hardware: Physikalische Komponenten (CPU, Speicher, Festplatte, Netzwerk, Peripheriegeräte); stellt Rechenleistung und Speicherplatz bereit. – Betriebssystemkern (Kernel): Vermittelt zwischen Hardware und Anwendungsprogrammen; steuert Speicher, Prozesse, Ein-/Ausgabe und das Dateisystem; bietet Schutzmechanismen zur Gewährleistung der Systemstabilität. – Anwendungsprogramme: Programme, die vom Nutzer ausgeführt werden (z. B. Browser, Textverarbeitung, Spiele); greifen über APIs auf Betriebssystemdienste zu."}, {"question": "Was ist ein Deadlock? Wie kann es verhindert werden?", "answer": "– Deadlock: Zustand, in dem Prozesse gegenseitig auf Ressourcen warten und somit keine Fortschritte möglich sind. – Verhinderung: Hierarchische Ressourcenvergabe; Deadlock-Vermeidung mit Algorithmen wie Bankier-Algorithmus; Deadlock-Erkennung durch Überwachung und Beenden von Prozessen."}, {"question": "Wie kommunizieren Micro-Kern-Systeme?", "answer": "Mikrokern-Systeme zeichnen sich durch einen modularen Aufbau aus, bei dem Systemdienste in separate Server-Prozesse aufgeteilt sind. Kommunikation über Interprozesskommunikation, Message Passing und Trapping."}, {"question": "Was sind die Unterschiede zwischen Traps und Interrupts?", "answer": "– Traps: Von Software ausgelöst; synchron zur Programmausführung; vorhersehbar und reproduzierbar; führen zu einem Wechsel in den Kernel-Modus. – Interrupts: Von Hardware ausgelöst; asynchron; unterbrechen laufende Prozesse; nicht vorhersehbar und meist prioritätsgesteuert."}, {"question": "3 Nutzungskonzepte bei der Abstraktion von Systemen", "answer": "– Prozesskonzept: Abstraktion von Programmen in separate, steuerbare Prozesse. – Dateikonzept: Vereinheitlichte Speicherung und Organisation von Daten. – Speicherkonzept: Verwaltung und Optimierung der Nutzung von Arbeitsspeicher, oft mittels Virtualisierung."}, {"question": "Was ist der Zweck einer API?", "answer": "– Bereitstellung einer standardisierten Schnittstelle zur Nutzung von Betriebssystemdiensten. – Kapselung: Verbergen interner Mechanismen, nur definierte Funktionen sind zugänglich. – Portabilität: Programme laufen auf verschiedenen Plattformen ohne Anpassungen. – Wiederverwendbarkeit: Zugriff auf bestehende Systemfunktionen ohne Eigenimplementierung."}, {"question": "Gehört Software zu IT-Systemen oder IT-Infrastruktur?", "answer": "IT-Infrastruktur."}, {"question": "Worin unterscheiden sich IT-Infrastruktur und IT-System?", "answer": "IT-Infrastruktur: Gesamtheit aller zum Betrieb notwendigen materiellen oder immateriellen Güter. IT-System: konkrete technische Anlage als abgeschlossene Funktionseinheit zur Informationsverarbeitung."}, {"question": "Wozu dient eine Semaphore im BS-Kontext?", "answer": "Synchronisationsmechanismus, der den gleichzeitigen Zugriff mehrerer Prozesse oder Threads auf gemeinsame Ressourcen steuert und koordiniert."}, {"question": "Was unterscheidet Dialog- und Stapelbetrieb?", "answer": "Stapelverarbeitung: Aufgaben werden nacheinander abgearbeitet, klassisch ohne Multitasking. Dialogbetrieb: Direkte Interaktion zwischen Nutzer und System über Ein-/Ausgabegeräte."}, {"question": "2 Aufgaben eines IT-Systems", "answer": "Informationsverwaltung und Kommunikation."}, {"question": "Warum gibt es heute keine Mehrprozessorsysteme für Endanwender mehr?", "answer": "Sie wurden im Consumer-Bereich weitgehend durch Mehrkernprozessoren verdrängt. Klassische Mehrprozessorsysteme findet man eher in Servern oder Großrechnern."}, {"question": "Aus welchen Schichten besteht ein klassisches 3-Layer-Netzwerk?", "answer": "Access Layer, Distribution Layer, Core Layer."}, {"question": "Was spricht für die Verwendung eines Collapsed Two Tier Layer-Systems? Welche Ebene wird hier eingespart?", "answer": "Reduktion von Komplexität; die Distribution-Ebene wird eingespart und in den Core-Layer integriert."}, {"question": "Was unterscheidet Trapping und Polling?", "answer": "Polling: Regelmäßige Abfrage durch den Manager. Trapping: Meldung bei speziellen Ereignissen oder Schwellwertüberschreitungen."}, {"question": "Aus welchen vier Elementen besteht das OSI Management Framework?", "answer": "Informationsmodell, Organisationsmodell, Kommunikationsmodell, Funktionsmodell."}, {"question": "Welche Entscheidungen müssen Sie bei der Planung eines Netzwerksystems treffen?", "answer": "Geschäftliche Entscheidungen: Ziele, Budget, verantwortliche Abteilung, geschäftlicher Nutzen. Technische Entscheidungen: Maschinen, Anbindung, Anwendungen, Infrastruktur zur Systemverwaltung."}, {"question": "Was sind RTO und RPO?", "answer": "RTO: maximal akzeptable Ausfallzeit eines Systems. RPO: maximaler Datenverlust bzw. maximaler Wiederherstellungspunkt."}, {"question": "Nennen Sie drei Arten von Malware", "answer": "Viren, Würmer und Trojaner."}, {"question": "Wie verbreiten sich Computerwürmer?", "answer": "Aktiv über Netzwerkverbindungen, durch Selbstkopie und Ausführung; oft über E-Mail-Clients, Wechselmedien und Sicherheitslücken."}, {"question": "Zwei Zugriffswege für Malware", "answer": "Drive-by-Download und Social Engineering."}, {"question": "Worauf zielen Phishing-Angriffe ab?", "answer": "Auf persönliche Daten und Login-Informationen."}, {"question": "Welches Ziel wird mit Ransomware verfolgt?", "answer": "Die Zahlung eines Lösegelds durch Sperrung oder Verschlüsselung von Daten/Systemen."}, {"question": "Kommunikation über verdeckte Kanäle ist nur schwer aufzudecken. Warum?", "answer": "Weil sie parasitär legitime Kommunikationskanäle mitnutzt und dadurch schwer erkennbar ist."}, {"question": "Wie funktioniert eine digitale Signatur? An welcher Stelle kommen privater und öffentlicher Schlüssel zum Einsatz?", "answer": "Zuerst wird ein Hash gebildet. Dieser wird mit dem privaten Schlüssel signiert. Der Empfänger prüft mit dem öffentlichen Schlüssel und vergleicht die Hash-Werte."}, {"question": "Nennen Sie vier Aufgaben einer Firewall!", "answer": "Trennung von Netzen, Zugangskontrolle, Beweissicherung/Protokollierung, Verbergen der internen Netzwerkstruktur."}, {"question": "Welche Sicherheitspolitik bietet die höchste Sicherheit? Warum?", "answer": "Die exklusive Politik (Whitelist), weil nur explizit erlaubte Kommunikation zugelassen wird und alles andere blockiert ist."}, {"question": "Was stellt das Regelwerk in einer Firewall dar?", "answer": "Die technische Umsetzung der Sicherheitsrichtlinien; es definiert, welcher Verkehr erlaubt oder blockiert wird und muss laufend gepflegt werden."}, {"question": "Was unterscheidet Authentisierung und Authentifizierung?", "answer": "Authentisierung = Nachweis der Identität durch die Instanz. Authentifizierung = Prüfung dieses Nachweises durch das System."}, {"question": "Wie sollten Regeln einer Firewall beschaffen sein?", "answer": "Klar, präzise, restriktiv, nach Least Privilege, gut dokumentiert und nachvollziehbar."}, {"question": "Wo ist die Bastion einer Firewall zu finden?", "answer": "Typischerweise in der DMZ zwischen internem Netz und Internet."}, {"question": "Was ist die Aufgabe eines Proxys?", "answer": "Vermittler zwischen internen Clients und externen Servern; leitet Anfragen weiter, filtert und kann cachen."}, {"question": "Erläutern Sie die Arbeitsweise eines Packet-Filters!", "answer": "Er prüft Pakete anhand von Quell-/Zieladresse, Port und Protokoll und entscheidet dann über Zulassen oder Blockieren."}, {"question": "Warum ist es sicherheitskritisch, Firewall-Regeln offen zu legen?", "answer": "Weil Angreifer daraus gezielt Schwachstellen und Umgehungsmöglichkeiten ableiten können."}, {"question": "Was bedeutet transparente Arbeitsweise im Bezug auf eine Firewall?", "answer": "Die Firewall überwacht und filtert im Hintergrund, ohne dass der Endnutzer es aktiv merkt."}, {"question": "Zu welchem Zeitpunkt wechselt ein Application Gateway in den Transparenz-Modus?", "answer": "Nach erfolgreicher Identifikation und Authentisierung beim Öffnen der Verbindung."}, {"question": "Wie wirkt sich die modulare monolithische Struktur des Linux-Kernels aus?", "answer": "Monolithisch = hohe Performance, geringe Latenz. Modular = Module wie Treiber können dynamisch nachgeladen werden. Ergebnis: schnell und flexibel."}, {"question": "Was ist der Unterschied zwischen einem Kernel und einer Distribution?", "answer": "Kernel = Kern des Betriebssystems. Distribution = lauffähiges Gesamtsystem aus Kernel plus Tools, Anwendungen, Oberfläche und Paketmanagement."}, {"question": "Was unterscheidet UNIX-artige und UNIXoide Betriebssysteme?", "answer": "UNIX-artig: orientiert sich an Standards wie POSIX und ist oft zertifiziert. UNIXoid: orientiert sich an der UNIX-Philosophie, ist aber nicht zwingend vollständig standardkonform oder zertifiziert."}, {"question": "Warum ist ein Embedded Linux System nicht so effizient wie ein Echtzeitbetriebssystem?", "answer": "Weil Linux standardmäßig nicht deterministisch für harte Echtzeitanforderungen optimiert ist; RTOS liefern garantierte Latenzen."}, {"question": "Warum versuchen Schadprogramme bei Linux den Kernel-Modus zu erreichen?", "answer": "Weil dort hohe Privilegien, direkter Hardwarezugriff und kritische Systemfunktionen möglich sind."}, {"question": "Erläutern Sie den modularen monolithischen Aufbau des Linux-Kernels! Wie wirkt sich dieser auf Treiber aus?", "answer": "Beim Start wird ein Kern geladen; weitere Module können zur Laufzeit nachgeladen oder entladen werden. Treiber sind dadurch flexibel, effizient und kontrollierbar einsetzbar."}, {"question": "Warum ist RAID 0 kein richtiges RAID-System?", "answer": "Weil es nur Striping zur Leistungssteigerung bietet, aber keine Redundanz oder Fehlertoleranz."}, {"question": "Beschreiben Sie das Prinzip einer synthetischen Vollsicherung!", "answer": "Ein neues Vollbackup wird aus einer älteren Vollsicherung und inkrementellen Backups zusammengesetzt, ohne die Quelldaten erneut komplett zu lesen."}, {"question": "Was wird mit dem Prinzip der Deduplizierung erreicht?", "answer": "Höhere Speichereffizienz durch Erkennen redundanter Datenblöcke und Ersetzen durch Verweise."}, {"question": "Warum ist es ratsam, persönliche/wichtige Dateien unabhängig von einem Systemabbild zu sichern?", "answer": "Weil bei Beschädigung des Systemabbilds sonst auch diese Daten verloren gehen können."}, {"question": "Was ist ein Systemprüfpunkt?", "answer": "Ein gespeicherter konsistenter Systemzustand als Rücksetzpunkt bei Fehlern oder Störungen."}, {"question": "Was unterscheidet File-Level-Backup und Block-Level-Backup?", "answer": "File-Level sichert Dateien/Verzeichnisse gezielt. Block-Level sichert Speicherblöcke und ist bei großen Datenmengen oft effizienter."}, {"question": "Was wird bei einem Wiederherstellungspunkt gesichert?", "answer": "Systemkonfiguration, wichtige Systemdateien und Zustände laufender Anwendungen."}, {"question": "Was ist die Aufgabe eines Dateisystems?", "answer": "Daten geordnet speichern und zuverlässig wiederfinden."}, {"question": "Wovon hängt ab, ob relativ oder index-sequentiell auf Datensätze innerhalb einer Datei zugegriffen wird?", "answer": "Von der Datensatzlänge: feste Länge = relativer Zugriff möglich; variable Länge = index-sequentiell nötig."}, {"question": "Erläutern Sie die Verwendung des Magic Word", "answer": "Ein definierter Wert zur Identifikation und Integritätsprüfung von Dateisystemstrukturen."}, {"question": "Warum finden lineare Dateisysteme in modernen BS keine Verwendung mehr?", "answer": "Sie sind bei großen Datenmengen und zufälligem Zugriff ineffizient; moderne Systeme nutzen hierarchische Dateisysteme."}, {"question": "Begründen Sie die Bezeichnung absoluter und relativer Pfad", "answer": "Absoluter Pfad beginnt an der Wurzel und ist eindeutig. Relativer Pfad bezieht sich auf das aktuelle Arbeitsverzeichnis."}, {"question": "Was unterscheidet interne und externe Fragmentierung?", "answer": "Intern: ungenutzter Speicher innerhalb eines Blocks. Extern: freie Bereiche sind verstreut und nicht zusammenhängend nutzbar."}, {"question": "Warum sollten Flash-Speichermedien nicht defragmentiert werden?", "answer": "Weil Defragmentierung unnötige Schreibvorgänge erzeugt und die Lebensdauer senkt, ohne nennenswerten Nutzen."}, {"question": "Warum werden HDD-Festplatten defragmentiert?", "answer": "Zur Verringerung der Zugriffszeiten durch Zusammenführung fragmentierter Daten."}, {"question": "Was ist Cache-Speicher? Was ist der Unterschied zu Hauptspeicher?", "answer": "Ein schneller Zwischenspeicher für häufig benötigte Daten; er überbrückt die Geschwindigkeitslücke zwischen CPU und Hauptspeicher."}, {"question": "Durch welches Verfahren wird mehr als ein Bit in einer Flash-Zelle gespeichert?", "answer": "Durch Multi-Level Cell (MLC) bzw. ähnliche Verfahren mit mehreren Ladungszuständen pro Zelle."}, {"question": "Welche Aufgaben hat die Speicherverwaltung in einem Rechner?", "answer": "Zuweisung/Freigabe, virtueller Speicher, Schutz/Isolation, Optimierung und Fragmentierungsminimierung."}, {"question": "Kann interne Fragmentierung durch Defragmentierung gelöst werden?", "answer": "Nein, interne Fragmentierung sitzt innerhalb zugewiesener Blöcke; Defragmentierung adressiert externe Fragmentierung."}, {"question": "Welche Anforderungen werden an eine Speicherverwaltung gestellt?", "answer": "Relocation, Protection, Sharing, Physical Organisation, Logical Organisation."}, {"question": "Was ist RAM, was ist ROM?", "answer": "RAM = Random Access Memory, Hauptspeicher. ROM = Read Only Memory."}, {"question": "Was unterscheidet direkte und dynamische Speicherverwaltung?", "answer": "Direkt: kompletter Speicher fest bzw. früh zugewiesen. Dynamisch: flexible Zuweisung zur Laufzeit, bei Bedarf."}, {"question": "Zu welchem Verfahren gehört das Swapping?", "answer": "Zur dynamischen Speicherverwaltung."}, {"question": "Was ist nicht Bestandteil der Metadaten einer Datei?", "answer": "Der eigentliche Dateiinhalt."}, {"question": "Zur Vermittlung zwischen welchen Bereichen wird ein Dateisystem eingesetzt?", "answer": "Zwischen physischer Speicherebene und logischer Datei-Ebene für Benutzer/Anwendungen."}, {"question": "Was wird im Dateideskriptor gespeichert?", "answer": "Verweis auf Dateieintrag/Inode, aktuelle Position, Zugriffsmodus und Statusinformationen."}, {"question": "Warum sollten Programme beim Aufruf von Dateien immer absolute Pfade nutzen?", "answer": "Um Mehrdeutigkeiten und Fehler durch unterschiedliche Arbeitsverzeichnisse zu vermeiden."}, {"question": "Woran unterscheidet ein Betriebssystem eine Datei?", "answer": "Über Metadaten wie Inode, Dateiname, Pfad und Attribute."}, {"question": "Welche Dateisysteme haben lineare Dateisysteme abgelöst?", "answer": "Moderne Dateisysteme wie ext3/ext4, NTFS oder HFS+."}, {"question": "Was unterscheidet das Schreiben in eine Datei vom Modifizieren einer Datei?", "answer": "Schreiben = neu anhängen oder komplett überschreiben. Modifizieren = gezielte Änderung bestehender Inhalte."}, {"question": "Was ist die kleinste Einheit in der Registerdatenbank?", "answer": "Der Registryeintrag bzw. Wert."}, {"question": "Wo speichern Programme nutzerbezogene Daten, wenn diese nicht in der Registry abgelegt werden?", "answer": "In Konfigurationsdateien, benutzerspezifischen Verzeichnissen oder proprietären Datenformaten/-datenbanken."}, {"question": "In welchem Format liegen die Daten der Registry auf dem Rechner ab?", "answer": "Als Binärdateien (Hive-Dateien)."}, {"question": "Was wird in dem Registry-Knoten HKEY_LOCAL_MACHINE gespeichert?", "answer": "Systemeinstellungen, Hardwarekonfiguration, installierte Software, Treiber und systemweite Dienste."}, {"question": "Warum sollte der Zugriff auf den Registrierungseditor nicht allen Nutzern gestattet sein?", "answer": "Zum Schutz vor Instabilität, Sicherheitsproblemen und Malware durch unerwünschte Änderungen."}, {"question": "Welche Möglichkeiten haben Sie, eine Sicherung der Registry zu erstellen?", "answer": "Export von Schlüsseln als .reg-Dateien, Systemwiederherstellungspunkte, spezielle Backup-Tools."}, {"question": "Aus wie vielen Wurzelknoten besteht die Registry im Regelfall?", "answer": "Aus fünf Hauptschlüsseln bzw. Wurzelschlüsseln."}, {"question": "Welche Dateien wurden verwendet, bevor die Registry entwickelt wurde?", "answer": "Konfigurationsdateien, insbesondere INI-Dateien."}, {"question": "Warum sind Konfigurationsdateien schwierig zu administrieren?", "answer": "Weil sie verstreut, textbasiert, performanceärmer und feingranular schwer zu berechtigen waren."}, {"question": "Auf welcher Ebene werden Berechtigungen zur Änderung der Registry vergeben?", "answer": "Auf Ebene der Zellen bzw. der Sicherheitsinformationen einzelner Registry-Strukturen."}, {"question": "Was unterscheidet Bare-Metal-HyperV und Hosted HyperV?", "answer": "Bare-Metal läuft direkt auf Hardware, Hosted auf einem bestehenden Betriebssystem mit mehr Overhead."}, {"question": "Was unterscheidet Simulation und Emulation?", "answer": "Simulation bildet Verhalten modellhaft nach; Emulation bildet die Hardwareumgebung so nach, dass Originalsoftware laufen kann."}, {"question": "Welcher reale Faktor wird bei virtuellen Systemen in der Regel vernachlässigt?", "answer": "Exakte physikalische Zeitverhalten, Latenzen und spezifische Hardwarebesonderheiten."}, {"question": "Was unterscheidet Container-Systeme von virtuellen Maschinen?", "answer": "Container teilen sich den Kernel und sind leichtergewichtig; VMs virtualisieren komplette Hardware und haben ein eigenes Gastbetriebssystem."}, {"question": "Welche Aufgabe hat der Chaos-Monkey? Zu welcher Strategie zählt er?", "answer": "Er provoziert absichtlich Störungen, um Schwachstellen sichtbar zu machen; das gehört zum Chaos Engineering."}, {"question": "Welche Systeme sind vom 2038-Problem nicht betroffen und warum?", "answer": "64-Bit-Systeme, weil ihre Zeitdarstellung nicht am 32-Bit-Unix-Time-Overflow scheitert."}, {"question": "Was ist Graceful Degradation?", "answer": "Kontrolliertes, teilweises Versagen: Das System stürzt nicht komplett ab, sondern hält kritische Dienste möglichst weiter verfügbar."}, {"question": "Zwei Bestandteile eines Scheduled Task im Windows-Kontext?", "answer": "Trigger (Auslöser) und Aktionen."}, {"question": "Beschreiben Sie zwei verschiedene Möglichkeiten, eine Aufgabe im Linux-Umfeld zu automatisieren.", "answer": "Cron und Systemd-Timer."}, {"question": "Was ist der Unterschied zwischen einer PowerShell-Pipeline und einer Bash-Pipeline?", "answer": "Bash reicht Textströme weiter. PowerShell reicht strukturierte Objekte weiter, deren Eigenschaften direkt genutzt werden können."}, {"question": "Von welchen Perspektiven aus können Sie ein Netzwerk betrachten?", "answer": "Physische Sicht und logische Sicht."}];
+
+const STORAGE_THEME = 'studyCardsTheme_v1';
+const STORAGE_SEEN = 'studyCardsSeen_v1';
+const STORAGE_CORRECT = 'studyCardsCorrect_v1';
+const STORAGE_WRONG = 'studyCardsWrong_v1';
+
+const els = {
+  totalCount: document.getElementById('totalCount'),
+  stackCount: document.getElementById('stackCount'),
+  seenCount: document.getElementById('seenCount'),
+  correctCount: document.getElementById('correctCount'),
+  wrongCount: document.getElementById('wrongCount'),
+  positionCount: document.getElementById('positionCount'),
+  search: document.getElementById('search'),
+  limit: document.getElementById('limit'),
+  order: document.getElementById('order'),
+  startBtn: document.getElementById('startBtn'),
+  restartBtn: document.getElementById('restartBtn'),
+  themeBtn: document.getElementById('themeBtn'),
+  resetProgressBtn: document.getElementById('resetProgressBtn'),
+  bar: document.getElementById('bar'),
+  meta: document.getElementById('meta'),
+  question: document.getElementById('question'),
+  answer: document.getElementById('answer'),
+  showBtn: document.getElementById('showBtn'),
+  correctBtn: document.getElementById('correctBtn'),
+  wrongBtn: document.getElementById('wrongBtn'),
+  nextBtn: document.getElementById('nextBtn')
+};
+
+let stack = [];
+let current = null;
+let currentIndex = 0;
+let seen = new Set();
+let correct = 0;
+let wrong = 0;
+let currentMarked = false;
+
+function loadSeen() {
+  try {
+    const raw = localStorage.getItem(STORAGE_SEEN);
+    if (raw) seen = new Set(JSON.parse(raw));
+  } catch (e) {
+    seen = new Set();
+  }
+}
+
+function saveSeen() {
+  localStorage.setItem(STORAGE_SEEN, JSON.stringify(Array.from(seen)));
+}
+
+function loadCounters() {
+  correct = Number(localStorage.getItem(STORAGE_CORRECT) || '0');
+  wrong = Number(localStorage.getItem(STORAGE_WRONG) || '0');
+}
+
+function saveCounters() {
+  localStorage.setItem(STORAGE_CORRECT, String(correct));
+  localStorage.setItem(STORAGE_WRONG, String(wrong));
+}
+
+function qKey(item) {
+  return item.question + '||' + item.answer;
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function applyTheme(mode) {
+  document.body.classList.toggle('light', mode === 'light');
+  els.themeBtn.textContent = mode === 'light' ? 'Dunkelmodus' : 'Hellmodus';
+  localStorage.setItem(STORAGE_THEME, mode);
+}
+
+function updateStats() {
+  els.totalCount.textContent = ALL_QUESTIONS.length;
+  els.stackCount.textContent = stack.length;
+  els.seenCount.textContent = seen.size;
+  els.correctCount.textContent = correct;
+  els.wrongCount.textContent = wrong;
+  els.positionCount.textContent = (stack.length || current)
+    ? `${Math.min(currentIndex, Math.max(currentIndex, 1))} / ${(stack.length + currentIndex)}`
+    : '0 / 0';
+
+  const done = currentIndex > 0 ? currentIndex - (current ? 1 : 0) : 0;
+  const denom = Math.max(done + stack.length + (current ? 1 : 0), 1);
+  els.bar.style.width = ((done / denom) * 100) + '%';
+}
+
+function buildStack() {
+  const q = els.search.value.trim().toLowerCase();
+  const limit = Number(els.limit.value);
+  const order = els.order.value;
+
+  let filtered = ALL_QUESTIONS.filter(item => {
+    const text = (item.question + ' ' + item.answer).toLowerCase();
+    return !q || text.includes(q);
+  });
+
+  if (order === 'unseen') {
+    filtered = filtered.filter(item => !seen.has(qKey(item)));
+  }
+
+  if (order === 'random') {
+    filtered = shuffle(filtered);
+  }
+
+  if (limit > 0) {
+    filtered = filtered.slice(0, limit);
+  }
+
+  stack = filtered;
+  current = null;
+  currentIndex = 0;
+
+  if (!stack.length) {
+    els.meta.textContent = '';
+    els.question.textContent = 'Keine passenden Fragen gefunden.';
+    els.answer.textContent = '';
+    els.answer.classList.add('hidden');
+    els.showBtn.classList.add('hidden');
+    els.correctBtn.classList.add('hidden');
+    els.wrongBtn.classList.add('hidden');
+    els.nextBtn.classList.add('hidden');
+    updateStats();
+    return;
+  }
+
+  nextQuestion();
+}
+
+function formatAnswer(text) {
+  return text
+    .replace(/\s–\s/g, '\n– ')
+    .replace(/\.\s([A-ZÄÖÜ][A-Za-zÄÖÜäöüß0-9\-\/() ]{2,40}:)/g, '.\n$1')
+    .replace(/:\s–\s/g, ':\n– ')
+    .replace(/;\s*/g, ';\n')
+    .trim();
+}
+
+function renderQuestion() {
+  if (!current) return;
+  els.meta.textContent = `Lernkarte ${currentIndex}`;
+  els.question.textContent = current.question;
+  els.answer.textContent = formatAnswer(current.answer);
+  els.answer.classList.add('hidden');
+  els.showBtn.classList.remove('hidden');
+  currentMarked = false;
+  els.correctBtn.classList.add('hidden');
+  els.wrongBtn.classList.add('hidden');
+  els.nextBtn.classList.add('hidden');
+  els.correctBtn.disabled = false;
+  els.wrongBtn.disabled = false;
+  updateStats();
+}
+
+function markAnswer(isCorrect) {
+  if (!current || currentMarked === true) return;
+  currentMarked = true;
+
+  if (isCorrect) {
+    correct += 1;
+    els.meta.textContent = `Lernkarte ${currentIndex} · als richtig markiert`;
+  } else {
+    wrong += 1;
+    els.meta.textContent = `Lernkarte ${currentIndex} · als falsch markiert`;
+  }
+
+  saveCounters();
+  updateStats();
+  els.correctBtn.disabled = true;
+  els.wrongBtn.disabled = true;
+}
+
+function nextQuestion() {
+  if (!stack.length) {
+    current = null;
+    els.meta.textContent = 'Fertig';
+    els.question.textContent = 'Alle ausgewählten Lernkarten wurden angezeigt.';
+    els.answer.textContent = '';
+    els.answer.classList.add('hidden');
+    els.showBtn.classList.add('hidden');
+    els.correctBtn.classList.add('hidden');
+    els.wrongBtn.classList.add('hidden');
+    els.nextBtn.classList.add('hidden');
+    updateStats();
+    return;
+  }
+
+  current = stack.shift();
+  currentIndex += 1;
+  seen.add(qKey(current));
+  saveSeen();
+  renderQuestion();
+}
+
+els.startBtn.addEventListener('click', buildStack);
+els.restartBtn.addEventListener('click', buildStack);
+els.showBtn.addEventListener('click', () => {
+  if (!current) return;
+  els.answer.classList.remove('hidden');
+  els.showBtn.classList.add('hidden');
+  els.correctBtn.classList.remove('hidden');
+  els.wrongBtn.classList.remove('hidden');
+  els.nextBtn.classList.remove('hidden');
+});
+els.correctBtn.addEventListener('click', () => markAnswer(true));
+els.wrongBtn.addEventListener('click', () => markAnswer(false));
+els.nextBtn.addEventListener('click', nextQuestion);
+els.themeBtn.addEventListener('click', () => {
+  const next = document.body.classList.contains('light') ? 'dark' : 'light';
+  applyTheme(next);
+});
+els.resetProgressBtn.addEventListener('click', () => {
+  localStorage.removeItem(STORAGE_SEEN);
+  localStorage.removeItem(STORAGE_CORRECT);
+  localStorage.removeItem(STORAGE_WRONG);
+  seen = new Set();
+  correct = 0;
+  wrong = 0;
+  updateStats();
+  alert('Gespeicherter Fortschritt sowie Richtig/Falsch-Zähler wurden zurückgesetzt.');
+});
+
+loadSeen();
+loadCounters();
+applyTheme(localStorage.getItem(STORAGE_THEME) || 'dark');
+els.totalCount.textContent = ALL_QUESTIONS.length;
+updateStats();
+</script>
+</body>
+</html>
