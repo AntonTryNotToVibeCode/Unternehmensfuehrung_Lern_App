@@ -46,6 +46,7 @@ button:disabled { opacity:.6; cursor:not-allowed; }
   display:inline-flex; align-items:center; gap:8px;
   padding:6px 10px; border-radius:999px; background:var(--panel2); border:1px solid var(--border); color:var(--muted);
 }
+.pill input { accent-color: var(--accent); }
 .question { font-size:1.55rem; line-height:1.45; margin:6px 0 18px; }
 .answerBox {
   border:1px solid var(--border); background:var(--panel2); border-radius:14px; padding:16px 18px;
@@ -57,6 +58,7 @@ button:disabled { opacity:.6; cursor:not-allowed; }
 }
 .progress > div { height:100%; width:0; background:var(--accent); transition:width .25s ease; }
 .small { font-size:.92rem; }
+.result { font-size:1rem; margin-top:10px; }
 </style>
 </head>
 <body>
@@ -96,7 +98,12 @@ button:disabled { opacity:.6; cursor:not-allowed; }
       <button class="secondary" id="themeBtn">Hellmodus</button>
       <button class="secondary" id="resetProgressBtn">Fortschritt zurücksetzen</button>
     </div>
+    <div class="row" style="margin-top:10px">
+      <label class="pill"><input type="checkbox" id="repeatWrongToggle" checked> Falsche Fragen wiederholen</label>
+      <label class="pill"><input type="checkbox" id="spacedWrongToggle" checked> Wiederholung nach 3 Fragen</label>
+    </div>
     <div class="progress"><div id="bar"></div></div>
+    <div class="result muted" id="result"></div>
   </div>
 
   <div class="card">
@@ -167,7 +174,6 @@ const ALL_QUESTIONS = [
   { category: 'Grundlagen zur Unternehmensführung', question: 'Welche Bedeutung haben Systemgrenzen für ein System?', answer: 'Über sie fließen Material, Energie, Kapital, Menschen, Betriebsmittel, Werkstoffe, Produkte, Dienstleistungen, Abfall und Rückkopplungen zwischen System und Umwelt.' },
   { category: 'Grundlagen zur Unternehmensführung', question: 'Welche Aufgabe hat Führung in einem offenen System?', answer: 'Sie hält die Elemente des Systems, die für dessen Lebensfähigkeit entscheidend sind, funktionsfähig.' },
   { category: 'Grundlagen zur Unternehmensführung', question: 'Welche Merkmale hat Führung in einem offenen System?', answer: 'Förderung der Vielfalt der Teilelemente; flexible Organisationsstruktur; dynamische Reaktion auf Veränderungen; Offenheit gegenüber Umwelt und Anspruchsgruppen; Controllingsystem zur Informationsaufbereitung; Selbstorganisation von Mitarbeitern und Teams.' },
-
   { category: 'Rahmenbedingungen und Wirkungsrichtungen der Unternehmensführung', question: 'Welche fünf Umwelten eines Unternehmens gibt es?', answer: 'Technologische Umwelt; ökonomische Umwelt; physikalisch-ökologische Umwelt; politisch-rechtliche Umwelt; soziodemographische Umwelt.' },
   { category: 'Rahmenbedingungen und Wirkungsrichtungen der Unternehmensführung', question: 'Welche drei Eigenschaften von Umwelten gibt es?', answer: 'Umweltkomplexität; Umweltdynamik; Umweltdruck.' },
   { category: 'Rahmenbedingungen und Wirkungsrichtungen der Unternehmensführung', question: 'Welche drei hierarchischen Umweltebenen gibt es?', answer: 'Gesamtumwelt, zum Beispiel die Branche; Umwelt mit direkter Beziehung zur Organisation, zum Beispiel Kunden und Lieferanten; Umwelt einzelner Abteilungen, zum Beispiel HR und Personalkandidaten.' },
@@ -181,7 +187,6 @@ const ALL_QUESTIONS = [
   { category: 'Rahmenbedingungen und Wirkungsrichtungen der Unternehmensführung', question: 'Was bedeutet Führung als Prozess?', answer: 'Die Gesamtheit kontinuierlich anfallender Aufgaben und Schritte zur Problemlösung. Führung umfasst Willensbildung und Willensdurchsetzung gegenüber anderen Personen sowie das Tragen von Verantwortung. Gemeint ist der Managementzyklus beziehungsweise Managementprozess.' },
   { category: 'Rahmenbedingungen und Wirkungsrichtungen der Unternehmensführung', question: 'Was bedeutet Führung als Funktion?', answer: 'Die Gesamtheit aller Aufgaben, die zur Lenkung eines Unternehmens notwendig sind. Dazu gehören keine rein operativen Aufgaben, sondern zum Beispiel Organisation, Controlling und Personalführung.' },
   { category: 'Rahmenbedingungen und Wirkungsrichtungen der Unternehmensführung', question: 'Welche zwei Meinungen gibt es zur Frage nach dem Treiber des Wohlstands in Industrienationen?', answer: 'Nach Smith, Taylor und Gutenberg sind Arbeitsteilung und effiziente Koordination durch rationale Planung und Organisation der zentrale Treiber. Nach Schumpeter ist Innovation die Durchsetzung neuer Kombinationen und damit der entscheidende Treiber.' },
-
   { category: 'Die verschiedenen Ebenen der Unternehmensführung', question: 'Welche vier Elemente gehören zur normativen Unternehmensführung?', answer: 'Unternehmensbild; Unternehmensidentität; Unternehmensphilosophie; Unternehmenskultur.' },
   { category: 'Die verschiedenen Ebenen der Unternehmensführung', question: 'Welche zwei Aspekte hat das Unternehmensbild?', answer: 'Binnenimage und Außenimage.' },
   { category: 'Die verschiedenen Ebenen der Unternehmensführung', question: 'Was ist das Binnenimage eines Unternehmens?', answer: 'Das Bild der Mitarbeiter von ihrem Unternehmen.' },
@@ -235,7 +240,6 @@ const ALL_QUESTIONS = [
   { category: 'Die verschiedenen Ebenen der Unternehmensführung', question: 'Welche unternehmensbezogenen Gegenstände strategischer Analyse gibt es?', answer: 'Stärken und Schwächen; vorhandene Potenziale; Kernkompetenzen; Entwicklungspotenziale.' },
   { category: 'Die verschiedenen Ebenen der Unternehmensführung', question: 'Welche umweltbezogenen Gegenstände strategischer Analyse gibt es?', answer: 'Nachfrager; Lieferanten; Konkurrenten; Gesetze.' },
   { category: 'Die verschiedenen Ebenen der Unternehmensführung', question: 'Wie hängen normatives, strategisches, taktisches und operatives Management zusammen?', answer: 'Normativ: Querschnitt mit Unternehmenszielen und Vision. Strategisch: Erfolgspotenziale, Fähigkeitspotenziale und Wettbewerbsstrategien zur Positionierung im Wettbewerb. Taktisch: Gestaltung von Produkt-, Kunden-, Produktions-, Lieferanten- und Prozessstrukturen als Ableitung aus dem Strategischen. Operativ: Absatz-, Produktions- und Beschaffungsprogramm als Umsetzung durch die operative Ausführung.' },
-
   { category: 'Unternehmensführungsfunktionen', question: 'Welche drei Organisationsbegriffe gibt es?', answer: 'Instrumental: Organisation als Struktur eines Systems, also Aufbau- und Ablauforganisation. Funktional: Organisation als Tätigkeit oder Vorgang des Organisierens. Institutional: Organisation als zielgerichtetes, offenes, soziales System.' },
   { category: 'Unternehmensführungsfunktionen', question: 'Was ist die informelle Organisation?', answer: 'Sie bildet sich durch Sympathie, Antipathie und Beziehungen zwischen den Mitarbeitern und ist nicht formell festgehalten.' },
   { category: 'Unternehmensführungsfunktionen', question: 'Welche zwei Arten von Organisation gibt es?', answer: 'Aufbauorganisation und Ablauforganisation.' },
@@ -300,10 +304,12 @@ const ALL_QUESTIONS = [
   { category: 'Unternehmensführungsfunktionen', question: 'Welche Organisationsformen sollte man nennen können?', answer: 'Einliniensystem, Mehrliniensystem, Divisionalorganisation, Matrixorganisation und Stabliniensystem.' }
 ];
 
-const STORAGE_THEME = 'studyCardsTheme_v2';
-const STORAGE_SEEN = 'studyCardsSeen_v2';
-const STORAGE_CORRECT = 'studyCardsCorrect_v2';
-const STORAGE_WRONG = 'studyCardsWrong_v2';
+const STORAGE_THEME = 'studyCardsTheme_v3';
+const STORAGE_SEEN = 'studyCardsSeen_v3';
+const STORAGE_CORRECT = 'studyCardsCorrect_v3';
+const STORAGE_WRONG = 'studyCardsWrong_v3';
+const STORAGE_REPEAT_WRONG = 'studyCardsRepeatWrong_v3';
+const STORAGE_SPACED_WRONG = 'studyCardsSpacedWrong_v3';
 
 const els = {
   totalCount: document.getElementById('totalCount'),
@@ -320,6 +326,9 @@ const els = {
   restartBtn: document.getElementById('restartBtn'),
   themeBtn: document.getElementById('themeBtn'),
   resetProgressBtn: document.getElementById('resetProgressBtn'),
+  repeatWrongToggle: document.getElementById('repeatWrongToggle'),
+  spacedWrongToggle: document.getElementById('spacedWrongToggle'),
+  result: document.getElementById('result'),
   bar: document.getElementById('bar'),
   meta: document.getElementById('meta'),
   question: document.getElementById('question'),
@@ -337,6 +346,8 @@ let seen = new Set();
 let correct = 0;
 let wrong = 0;
 let currentMarked = false;
+let shownCount = 0;
+let wrongStats = new Map();
 
 function loadSeen() {
   try {
@@ -359,6 +370,19 @@ function loadCounters() {
 function saveCounters() {
   localStorage.setItem(STORAGE_CORRECT, String(correct));
   localStorage.setItem(STORAGE_WRONG, String(wrong));
+}
+
+function loadRepeatSettings() {
+  const repeatWrong = localStorage.getItem(STORAGE_REPEAT_WRONG);
+  const spacedWrong = localStorage.getItem(STORAGE_SPACED_WRONG);
+
+  els.repeatWrongToggle.checked = repeatWrong === null ? true : repeatWrong === 'true';
+  els.spacedWrongToggle.checked = spacedWrong === null ? true : spacedWrong === 'true';
+}
+
+function saveRepeatSettings() {
+  localStorage.setItem(STORAGE_REPEAT_WRONG, String(els.repeatWrongToggle.checked));
+  localStorage.setItem(STORAGE_SPACED_WRONG, String(els.spacedWrongToggle.checked));
 }
 
 function qKey(item) {
@@ -423,6 +447,9 @@ function buildStack() {
   stack = filtered;
   current = null;
   currentIndex = 0;
+  shownCount = 0;
+  wrongStats = new Map();
+  els.result.textContent = '';
 
   if (!stack.length) {
     els.meta.textContent = '';
@@ -451,7 +478,11 @@ function formatAnswer(text) {
 
 function renderQuestion() {
   if (!current) return;
-  els.meta.textContent = `${current.category} · Lernkarte ${currentIndex}`;
+
+  const state = wrongStats.get(qKey(current));
+  const previousWrongText = state?.count ? ` · bisher falsch: ${state.count}×` : '';
+
+  els.meta.textContent = `${current.category} · Lernkarte ${currentIndex}${previousWrongText}`;
   els.question.textContent = current.question;
   els.answer.textContent = formatAnswer(current.answer);
   els.answer.classList.add('hidden');
@@ -469,11 +500,54 @@ function markAnswer(isCorrect) {
   if (!current || currentMarked) return;
   currentMarked = true;
 
+  const key = qKey(current);
+  const questionState = wrongStats.get(key) || { count: 0, dueAt: 0, resolved: true };
+
   if (isCorrect) {
-    correct += 1;
-    els.meta.textContent = `${current.category} · Lernkarte ${currentIndex} · als richtig markiert`;
+    if (!questionState.resolved && questionState.count > 0) {
+      wrong = Math.max(0, wrong - 1);
+      correct += 1;
+      wrongStats.set(key, {
+        ...questionState,
+        resolved: true,
+        dueAt: 0
+      });
+      els.result.textContent = 'Jetzt richtig. Der vorherige Fehler wurde ausgeglichen.';
+      els.meta.textContent = `${current.category} · Lernkarte ${currentIndex} · als richtig markiert`;
+    } else {
+      correct += 1;
+      wrongStats.set(key, {
+        ...questionState,
+        resolved: true,
+        dueAt: 0
+      });
+      els.result.textContent = 'Richtig.';
+      els.meta.textContent = `${current.category} · Lernkarte ${currentIndex} · als richtig markiert`;
+    }
   } else {
-    wrong += 1;
+    const repeatEnabled = els.repeatWrongToggle.checked;
+    const nextDueAt = shownCount + (els.spacedWrongToggle.checked ? 3 : 1);
+
+    if (questionState.resolved || questionState.count === 0) {
+      wrong += 1;
+    }
+
+    wrongStats.set(key, {
+      count: (questionState.count || 0) + 1,
+      dueAt: nextDueAt,
+      resolved: false
+    });
+
+    if (repeatEnabled) {
+      stack.push(current);
+    }
+
+    els.result.textContent = repeatEnabled
+      ? (els.spacedWrongToggle.checked
+        ? 'Als falsch markiert. Die Frage wird nach 3 weiteren Fragen wiederholt.'
+        : 'Als falsch markiert. Die Frage wird möglichst früh wiederholt.')
+      : 'Als falsch markiert.';
+
     els.meta.textContent = `${current.category} · Lernkarte ${currentIndex} · als falsch markiert`;
   }
 
@@ -494,12 +568,38 @@ function nextQuestion() {
     els.correctBtn.classList.add('hidden');
     els.wrongBtn.classList.add('hidden');
     els.nextBtn.classList.add('hidden');
+    if (!els.result.textContent) {
+      els.result.textContent = 'Stapel abgeschlossen.';
+    }
     updateStats();
     return;
   }
 
-  current = stack.shift();
+  let nextIndex = 0;
+
+  if (els.repeatWrongToggle.checked) {
+    if (els.spacedWrongToggle.checked) {
+      const dueIndex = stack.findIndex((item) => {
+        const state = wrongStats.get(qKey(item));
+        return state && !state.resolved && state.dueAt <= shownCount;
+      });
+      if (dueIndex >= 0) {
+        nextIndex = dueIndex;
+      }
+    } else {
+      const repeatIndex = stack.findIndex((item) => {
+        const state = wrongStats.get(qKey(item));
+        return state && !state.resolved;
+      });
+      if (repeatIndex >= 0) {
+        nextIndex = repeatIndex;
+      }
+    }
+  }
+
+  current = stack.splice(nextIndex, 1)[0];
   currentIndex += 1;
+  shownCount += 1;
   seen.add(qKey(current));
   saveSeen();
   renderQuestion();
@@ -529,12 +629,16 @@ els.resetProgressBtn.addEventListener('click', () => {
   seen = new Set();
   correct = 0;
   wrong = 0;
+  wrongStats = new Map();
   updateStats();
-  alert('Gespeicherter Fortschritt sowie Richtig/Falsch-Zähler wurden zurückgesetzt.');
+  els.result.textContent = 'Gespeicherter Fortschritt sowie Richtig/Falsch-Zähler wurden zurückgesetzt.';
 });
+els.repeatWrongToggle.addEventListener('change', saveRepeatSettings);
+els.spacedWrongToggle.addEventListener('change', saveRepeatSettings);
 
 loadSeen();
 loadCounters();
+loadRepeatSettings();
 applyTheme(localStorage.getItem(STORAGE_THEME) || 'dark');
 updateStats();
 </script>
